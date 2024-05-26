@@ -12,4 +12,11 @@ app.use(morgan("dev"));
 app.use("/api/v1/tours", tourRouter);
 app.use("/api/v1/users", userRouter);
 
+app.all("*", (request, response, next) => {
+  response.status(404).json({
+    status: "fail",
+    message: `Can't find ${request.originalUrl} on this server.`,
+  });
+});
+
 module.exports = app;
