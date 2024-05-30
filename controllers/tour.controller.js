@@ -1,5 +1,3 @@
-const { Op } = require("sequelize");
-
 const Tour = require("../models/tour.model");
 const sequelize = require("../database/db.config");
 

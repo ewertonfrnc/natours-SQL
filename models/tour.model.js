@@ -8,6 +8,12 @@ const Tour = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
+      validate: {
+        len: {
+          args: [10],
+          msg: "A tour name must have more or equal then 10 characters",
+        },
+      },
     },
     duration: {
       type: DataTypes.INTEGER,
@@ -20,10 +26,17 @@ const Tour = sequelize.define(
     difficulty: {
       type: DataTypes.STRING,
       allowNull: false,
+      validate: {
+        isIn: {
+          args: [["easy", "medium", "difficult"]],
+          msg: "Difficulty is either: easy, medium, difficult",
+        },
+      },
     },
     ratingsAverage: {
       type: DataTypes.DOUBLE,
       defaultValue: 4.5,
+      validate: { max: { args: 5, msg: "Rating must be below 5.0" } },
     },
     ratingsQuantity: {
       type: DataTypes.INTEGER,
