@@ -52,6 +52,14 @@ module.exports = (error, request, response, next) => {
       err = new AppError(`Invalid input data. ${errors.join(". ")}`, 400);
     }
 
+    if (err.name === "JsonWebTokenError") {
+      err = new AppError("Invalid token. Please log in again.", 401);
+    }
+
+    if (err.name === "TokenExpiredError") {
+      err = new AppError("Your token has expired! Please log in again.", 401);
+    }
+
     return sendErrorProd(err, response);
   }
 

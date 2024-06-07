@@ -34,6 +34,9 @@ const User = sequelize.define(
         },
       },
     },
+    passwordChangedAt: {
+      type: DataTypes.DATE,
+    },
   },
   {
     tableName: "users",
@@ -54,4 +57,5 @@ User.addHook("beforeSave", async (user) => {
   user.passwordConfirm = "";
 });
 
+// User.sync({ force: true });
 module.exports = User;

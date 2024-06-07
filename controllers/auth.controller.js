@@ -1,3 +1,5 @@
+const { promisify } = require("util");
+
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 
@@ -42,4 +44,54 @@ exports.login = catchAsync(async (request, response, next) => {
     status: "success",
     token,
   });
+});
+
+exports.protect = catchAsync(async (request, response, next) => {
+  let token;
+
+  // Get auth jwt token and check if it exists
+  if (
+    request.headers.authorization &&
+    request.headers.authorization.startsWith("Bearer")
+  ) {
+    token = request.headers.authorization.split(" ")[1];
+  }
+
+  if (!token)
+    return next(
+      new AppError("Your are not logged in! Please log in to get access.", 401),
+    );
+
+  //  Verify jwt token
+  const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+
+  // Check if user still exists
+  const currentUser = await User.findByPk(decoded.id);
+  if (!currentUser)
+    return next(
+      new AppError(
+        "The user belonging to this token does no longer exist.",
+        401,
+      ),
+    );
+
+  // Check if user changed password after the jwt token  was issued
+  if (currentUser.passwordChangedAt) {
+    const changedTimestamp = parseInt(
+      currentUser.passwordChangedAt.getTime() / 1000,
+      10,
+    );
+
+    if (decoded.iat < changedTimestamp)
+      return next(
+        new AppError(
+          "User recently changed password! Please log in again.",
+          401,
+        ),
+      );
+  }
+
+  // GRANT ACCESS TO PROTECTED ROUTE
+  request.user = currentUser;
+  next();
 });
