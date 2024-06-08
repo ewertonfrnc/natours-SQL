@@ -18,6 +18,11 @@ const User = sequelize.define(
     photo: {
       type: DataTypes.STRING,
     },
+    role: {
+      type: DataTypes.ENUM,
+      values: ["user", "guide", "lead-guide", "admin"],
+      defaultValue: "user",
+    },
     password: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -34,9 +39,9 @@ const User = sequelize.define(
         },
       },
     },
-    passwordChangedAt: {
-      type: DataTypes.DATE,
-    },
+    passwordChangedAt: { type: DataTypes.DATE },
+    passwordResetToken: { type: DataTypes.STRING },
+    passwordResetExpires: { type: DataTypes.DATE },
   },
   {
     tableName: "users",
@@ -55,7 +60,8 @@ User.addHook("beforeSave", async (user) => {
   if (!user.changed("password")) return;
   user.password = await bcrypt.hash(user.password, 14);
   user.passwordConfirm = "";
+  user.passwordChangedAt = Date.now() - 1000;
 });
 
-// User.sync({ force: true });
+// User.sync({ alter: true });
 module.exports = User;
