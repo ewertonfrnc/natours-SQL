@@ -1,3 +1,4 @@
+const { Op } = require("sequelize");
 const { promisify } = require("util");
 const crypto = require("crypto");
 
@@ -9,12 +10,21 @@ const User = require("../models/user.model");
 const AppError = require("../utils/app-error.utils");
 const catchAsync = require("../utils/catch-async.utils");
 const sendEmail = require("../utils/email");
-const { Op } = require("sequelize");
 
 const signToken = (userId) =>
   jwt.sign({ id: userId }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN,
   });
+
+const createSendtoken = (user, statusCode, response) => {
+  const token = signToken(user.id);
+
+  response.status(statusCode).json({
+    status: "success",
+    token,
+    data: { user: user },
+  });
+};
 
 exports.signUp = catchAsync(async (request, response, next) => {
   const { name, email, password, passwordConfirm, passwordChangedAt, role } =
@@ -28,13 +38,7 @@ exports.signUp = catchAsync(async (request, response, next) => {
     role,
   });
 
-  const token = signToken(newUser.id);
-
-  response.status(200).json({
-    status: "success",
-    token,
-    data: { user: newUser },
-  });
+  createSendtoken(newUser, 201, response);
 });
 
 exports.login = catchAsync(async (request, response, next) => {
@@ -50,11 +54,7 @@ exports.login = catchAsync(async (request, response, next) => {
     return next(new AppError("Incorrect email or password", 401));
 
   // if everything is ok, sendo token to client
-  const token = signToken(user.id);
-  response.status(200).json({
-    status: "success",
-    token,
-  });
+  createSendtoken(user, 200, response);
 });
 
 exports.protect = catchAsync(async (request, response, next) => {
@@ -186,9 +186,26 @@ exports.resetPassword = catchAsync(async (request, response, next) => {
 
   // Update changedPasswordAt property for the user
   // Log the user in, send JWT
-  const token = signToken(user.id);
-  response.status(200).json({
-    status: "success",
-    token,
-  });
+  createSendtoken(user, 200, response);
+});
+
+exports.updatePassword = catchAsync(async (request, response, next) => {
+  // Get user from database
+  const user = await User.scope("withPassword").findByPk(request.user.id);
+
+  // Check if POSTed current password is correct
+  if (
+    !user ||
+    !(await bcrypt.compare(request.body.passwordCurrent, user.password))
+  )
+    return next(new AppError("Your current password is wrong.", 404));
+
+  // if so, update password
+  user.password = request.body.password;
+  user.passwordConfirm = request.body.passwordConfirm;
+  await user.save();
+
+  // Log user in, send JWT token
+
+  createSendtoken(user, 200, response);
 });
